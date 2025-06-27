@@ -1,0 +1,30 @@
+import requests #request to a web page
+
+#hledám podle ICO
+#ico 03650120
+
+def najdi_subjekt_dle_ico():
+    ico = input("Zadej IČO subjektu: ").strip() #odstraněné mezery
+    url = f"https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}" #vkládám  URL
+    response = requests.get(url) #odesílám get požadavek
+
+    print(f"Status code: {response.status_code}") #doplněno pro přehlednost
+    if response.status_code == 200:
+        print("Všechno proběhlo v pořádku (200 OK).")
+        data = response.json() #ve formátu json
+        obchodni_jmeno = data.get("obchodniJmeno", "Neznámé jméno") #viz testovaci_script_json
+        adresa = data.get("sidlo", {}).get("textovaAdresa", "Neznámá adresa")
+
+        print(obchodni_jmeno)
+        print(adresa)
+
+    elif response.status_code == 404:
+        print("Subjekt s tímto IČO nebyl nalezen (404 Not Found).")
+    elif response.status_code == 400:
+        print("Špatný požadavek (400 Bad Request). Zkontroluj formát IČO.")
+    elif response.status_code == 500:
+        print("Chyba na straně serveru (500 Internal Server Error).")
+    else:
+        print("Došlo k jiné chybě.")
+
+najdi_subjekt_dle_ico()
