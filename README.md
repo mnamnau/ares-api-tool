@@ -24,10 +24,7 @@ This Python project provides tools for querying the Czech ARES (Administrative R
 1. Make sure Python 3.8+ is installed.
 2. Install required package:
 
-   ```bash
-   pip install requests
-
-Run the script:
+```bash
 python ares_api_tool_ico.py
 python ares_api_tool_name.py
 python ares_api_tool_legal_form.py
