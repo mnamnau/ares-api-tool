@@ -19,6 +19,9 @@ This Python project provides tools for querying the Czech ARES (Administrative R
 - **Error handling**: Detects invalid input and API errors.
 - Uses `requests` and parses JSON responses.
 
+## API ARES Documentation 
+https://www.mfcr.cz/assets/attachments/2023-08-01_ARES-Technicka-dokumentace-Katalog-verejnych-sluzeb_v06.pdf
+
 ## How to Run
 
 1. Make sure Python 3.8+ is installed.
