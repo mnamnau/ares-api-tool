@@ -4,6 +4,12 @@ import requests #request to a web page
 #hledám podle názvu
 
 def najdi_subjekt_dle_nazvu():
+    """
+    Vyhledá subjekt podle zadaného IČO pomocí ARES API.
+
+    :param ico: IČO subjektu jako řetězec (string)
+    :return: Slovník s výsledky nebo chybová zpráva
+    """
     nazev = input("Zadej název subjektu pro hledání: ").strip() #definuju název subjektu
     url = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat"
     
@@ -13,10 +19,24 @@ def najdi_subjekt_dle_nazvu():
     }
     
     data = {"obchodniJmeno": nazev} 
-    response = requests.post(url, headers=headers, json=data) #přidat hlavičku (parametr headers), který určí formát vstupních dat
-
+    # Připravuji data pro POST požadavek jako JSON, kde "obchodniJmeno" je název subjektu, který hledám.
+    # Používám slovník, který bude převeden na JSON formát při odeslání požadavku.
+    # Přidávám timeout pro případ, že API neodpovídá, aby se program nezasekl.
+    # Pokud by API neodpovídalo, program vypíše chybovou zprávu a skončí.   
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("Požadavek vypršel (timeout). Zkuste to prosím znovu.")
+        return
+    except requests.exceptions.RequestException as e:
+        print(f"Nastala chyba při komunikaci s API: {e}")
+        return
     
     print(f"Status code: {response.status_code}") 
+    #doplněno pro přehlednost
+    # Zpracování odpovědi:
+    # Pokud je odpověď úspěšná (status code 200), zpracuji JSON data.
+    # Pokud je odpověď s chybou, vypíšu příslušnou chybovou zprávu.
     if response.status_code == 200:     # Zpracování odpovědi podle typu výsledku:
         print("Všechno proběhlo v pořádku (200 OK).")
         vysledky = response.json() # Dostanu obsah odpovědi jako JSON (slovník)
