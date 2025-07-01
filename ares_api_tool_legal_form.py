@@ -1,9 +1,11 @@
-import requests #request to a web page
+import requests
 
-#ico 03650120
-#přidávám právní formu
+def stahni_ciselnik_pravnich_forem():
+    """
+    Načte číselník právních forem z ARES API.
 
-def stahni_ciselnik_pravnich_forem(): #načte čísleník právních forem
+    :return: Seznam položek číselníku právních forem nebo prázdný list při chybě.
+    """
     url = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ciselniky-nazevniky/vyhledat"
     headers = {
         "accept": "application/json",
@@ -14,15 +16,24 @@ def stahni_ciselnik_pravnich_forem(): #načte čísleník právních forem
         "zdrojCiselniku": "res"
     }
 
-    response = requests.post(url, headers=headers, json=data)
-
-    if response.status_code == 200:
-        return response.json()["ciselniky"][0]["polozkyCiselniku"]
-    else:
-        print("Nepodařilo se načíst číselník právních forem.")
-        return []
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        if response.status_code == 200:
+            return response.json()["ciselniky"][0]["polozkyCiselniku"]
+        else:
+            print("Nepodařilo se načíst číselník právních forem.")
+    except requests.exceptions.RequestException as e:
+        print(f"Chyba při načítání číselníku: {e}")
+    return []
 
 def najdi_pravni_formu(kod, ciselnik):
+    """
+    Vrátí název právní formy podle kódu z číselníku.
+
+    :param kod: Kód právní formy (např. "112")
+    :param ciselnik: Seznam položek číselníku
+    :return: Název právní formy v češtině nebo "Neznámá právní forma"
+    """
     for polozka in ciselnik:
         if polozka.get("kod") == kod:
             nazvy = polozka.get("nazev", [])
@@ -31,9 +42,13 @@ def najdi_pravni_formu(kod, ciselnik):
                     return nazev.get("nazev", "Neznámá právní forma")
     return "Neznámá právní forma"
 
-def najdi_subjekt_dle_nazvu():
-    nazev = input("Zadej název subjektu pro hledání: ").strip()  # definice názvu subjektu
+def vyhledej_subjekty_dle_nazvu(nazev):
+    """
+    Zavolá ARES API a vrátí seznam subjektů podle obchodního jména.
 
+    :param nazev: Hledaný název subjektu
+    :return: Slovník s výsledky nebo None při chybě
+    """
     url = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat"
     headers = {
         "accept": "application/json",
@@ -41,43 +56,53 @@ def najdi_subjekt_dle_nazvu():
     }
     data = {"obchodniJmeno": nazev}
 
-    response = requests.post(url, headers=headers, json=data)
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        print(f"Status code: {response.status_code}")
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 404:
+            print("Subjekt nebyl nalezen (404 Not Found).")
+        elif response.status_code == 400:
+            print("Špatný požadavek (400 Bad Request). Zkontroluj formát názvu.")
+        elif response.status_code == 500:
+            print("Chyba na straně serveru (500 Internal Server Error).")
+        else:
+            print("Došlo k jiné chybě.")
+    except requests.exceptions.RequestException as e:
+        print(f"Chyba při komunikaci s API: {e}")
+    return None
 
-    print(f"Status code: {response.status_code}")
-    if response.status_code == 200:
-        print("Všechno proběhlo v pořádku (200 OK).")
-        vysledky = response.json()
+def zobraz_subjekty(vysledky, ciselnik):
+    """
+    Vypíše seznam subjektů s obchodním jménem, IČO a právní formou.
 
-        pocet = vysledky.get("pocetCelkem", 0)
-        print(f"Nalezeno subjektů: {pocet}")
+    :param vysledky: Slovník vrácený API
+    :param ciselnik: Seznam právních forem
+    """
+    pocet = vysledky.get("pocetCelkem", 0)
+    print(f"Nalezeno subjektů: {pocet}")
 
-        if pocet == 0:
-            print("Nebyl nalezen žádný subjekt s tímto názvem.")
-            return
+    if pocet == 0:
+        print("Nebyl nalezen žádný subjekt s tímto názvem.")
+        return
 
-        # Načteme číselník právních forem
-        pravni_formy = stahni_ciselnik_pravnich_forem()
+    for subjekt in vysledky.get("ekonomickeSubjekty", []):
+        jmeno = subjekt.get("obchodniJmeno", "Neznámý název")
+        ico = subjekt.get("ico", "Neznámé IČO")
+        kod_formy = subjekt.get("pravniForma", {}).get("kod") if isinstance(subjekt.get("pravniForma"), dict) else subjekt.get("pravniForma")
+        nazev_formy = najdi_pravni_formu(kod_formy, ciselnik)
+        print(f"{jmeno}, {ico}, {nazev_formy}")
 
-        # Výpis subjektů včetně právní formy
-        for subjekt in vysledky.get("ekonomickeSubjekty", []):
-            jmeno = subjekt.get("obchodniJmeno", "Neznámý název")
-            ico = subjekt.get("ico", "Neznámé IČO")
-            #kod_formy = subjekt.get("pravniForma", {}).get("kod") #nefunční, předpokládá se, že bude vrácen slovník
-            pravni_forma = subjekt.get("pravniForma")
-            if isinstance(pravni_forma, dict):
-                kod_formy = pravni_forma.get("kod")
-            else:
-                kod_formy = pravni_forma  # použiju řetězec (např. "112")
-            nazev_formy = najdi_pravni_formu(kod_formy, pravni_formy)
-            print(f"{jmeno}, {ico}, {nazev_formy}")
+def spust_dotaz():
+    """
+    Spustí vyhledávání subjektů podle názvu s interaktivním vstupem.
+    """
+    nazev = input("Zadej název subjektu pro hledání: ").strip()
+    vysledky = vyhledej_subjekty_dle_nazvu(nazev)
+    if vysledky:
+        ciselnik = stahni_ciselnik_pravnich_forem()
+        zobraz_subjekty(vysledky, ciselnik)
 
-    elif response.status_code == 404:
-        print("Subjekt nebyl nalezen (404 Not Found).")
-    elif response.status_code == 400:
-        print("Špatný požadavek (400 Bad Request). Zkontroluj formát názvu.")
-    elif response.status_code == 500:
-        print("Chyba na straně serveru (500 Internal Server Error).")
-    else:
-        print("Došlo k jiné chybě.")
-
-najdi_subjekt_dle_nazvu()
+# Spuštění skriptu
+spust_dotaz()
