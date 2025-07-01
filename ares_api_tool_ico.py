@@ -4,9 +4,25 @@ import requests #request to a web page
 #ico 03650120
 
 def najdi_subjekt_dle_ico():
+    """
+    Vyhledá subjekt podle zadaného IČO pomocí ARES API.
+
+    :param ico: IČO subjektu jako řetězec (string)
+    :return: Slovník s výsledky nebo chybová zpráva
+    """
     ico = input("Zadej IČO subjektu: ").strip() #odstraněné mezery
     url = f"https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}" #vkládám  URL
-    response = requests.get(url) #odesílám get požadavek
+    """
+    doplněná podmínka timeout, aby se program nezasekl při neodpovídajícím API
+    """
+    try:
+        response = requests.get(url, timeout=10)  # přidán timeout
+    except requests.exceptions.Timeout:
+        print("Požadavek vypršel (timeout). Zkuste to prosím znovu.")
+        return
+    except requests.exceptions.RequestException as e:
+        print(f"Nastala chyba při komunikaci s API: {e}")
+        return
 
     print(f"Status code: {response.status_code}") #doplněno pro přehlednost
     if response.status_code == 200:
